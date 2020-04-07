@@ -687,6 +687,23 @@
                    ,(@ (not-for-info (src-loc e))
                        `(λ (,y . ,xs) ,b))))
              tv)]
+     [`(let ((,(binder x-loc x) ,x-e)) ,b)
+      (let ((x^ (fresh Γ x)))
+        (go-on ((`(the ,x-t-out ,x-e-out) (synth Γ r x-e))
+                (b-out (let* ([x-tv (val-in-ctx Γ x-t-out)]
+                              [xv (val-in-ctx Γ x-e-out)]
+                              [Γ^ (bind-val Γ x^ x-tv xv)]
+                              [r^ (extend-renaming r x x^)])
+                         (check Γ^ r^ b tv))))
+               (go `(let ((,x^ ,x-e-out)) ,b-out))))]
+     [`(let (,b1 ,b2 . ,bs) ,body)
+      (check Γ
+             r
+             (@ (src-loc e)
+                `(let (,b1)
+                   ,(@ (not-for-info (src-loc e))
+                       `(let (,b2 . ,bs) ,body))))
+             tv)]
      [`(cons ,a ,d)
       (match (now tv)
         [(SIGMA x A c)

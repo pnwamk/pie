@@ -32,4 +32,5 @@
   Vec vecnil vec:: head tail ind-Vec
   Either left right ind-Either
   TODO the
-  check-same claim define)
+  check-same claim define
+  let equal)

@@ -39,7 +39,7 @@
 (define-type Pie-Keyword
   (U 'U
      'Nat 'zero 'add1 'which-Nat 'iter-Nat 'rec-Nat 'ind-Nat
-     '-> '→ 'Π 'λ 'Pi '∏ 'lambda
+     '-> '→ 'Π 'λ 'Pi '∏ 'lambda 'let
      'quote 'Atom
      'car 'cdr 'cons 'Σ 'Sigma 'Pair
      'Trivial 'sole
@@ -96,6 +96,7 @@
      (List* '-> Src Src (Listof Src))
      (List 'Π (List* Typed-Binder (Listof Typed-Binder)) Src)
      (List 'λ (List* Binding-Site (Listof Binding-Site)) Src)
+     (List 'let (List* (List Binding-Site Src) (Listof (List Binding-Site Src))) Src)
      (List 'Σ (List* Typed-Binder (Listof Typed-Binder)) Src)
      (List 'Pair Src Src)
      (List 'cons Src Src)
@@ -148,6 +149,7 @@
      (List 'ind-Nat Core Core Core Core)
      (List 'Π (List (List Symbol Core)) Core)
      (List 'λ (List Symbol) Core)
+     (List 'let (List (List Symbol Core)) Core)
      'Atom
      (List 'quote Symbol)
      (List 'Σ (List (List Symbol Core)) Core)
@@ -377,7 +379,8 @@
   (not (or (eqv? x 'U) (eqv? x 'Nat) (eqv? x 'zero)
            (eqv? x 'add1) (eqv? x 'which-Nat) (eqv? x 'ind-Nat)
            (eqv? x 'rec-Nat) (eqv? x 'iter-Nat)
-           (eqv? x '->) (eqv? x '→) (eqv? x 'Π) (eqv? x 'Pi) (eqv? x '∏) (eqv? x 'λ) (eqv? x 'lambda)
+           (eqv? x '->) (eqv? x '→) (eqv? x 'Π) (eqv? x 'Pi) (eqv? x '∏) 
+           (eqv? x 'λ) (eqv? x 'lambda) (eqv? x 'let)
            (eqv? x 'quote) (eqv? x 'Atom) (eqv? x 'Σ) (eqv? x 'Sigma) (eqv? x 'Pair)
            (eqv? x 'cons) (eqv? x 'car) (eqv? x 'cdr)
            (eqv? x 'Trivial) (eqv? x 'sole)

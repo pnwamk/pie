@@ -1,13 +1,13 @@
 #lang scribble/manual
 
-@(require (for-label (only-meta-in 0 pie))
+@(require (for-label (only-meta-in 0 pie-a-let-mode))
           racket/sandbox scribble/example
           (for-syntax racket/base syntax/parse))
 
 @(define ev
    (parameterize ([sandbox-output 'string]
                   [sandbox-error-output 'string])
-     (make-evaluator 'pie)))
+     (make-evaluator 'pie-a-let-mode)))
 
 @(define-syntax (ex stx)
    (syntax-parse stx
@@ -54,37 +54,65 @@
         (defproc #:kind "eliminator" elim-expr content ...))]))
 
 
-@title{The Pie Reference}
-@author{David Thrane Christiansen and Daniel P. Friedman}
+@title{The Pie à-let-mode Reference}
+@author{Andrew M. Kent}
 
 
 
-@defmodule[pie #:lang]{
- Pie is a little language with dependent types that accompanies
- @hyperlink["http://thelittletyper.com"]{@emph{The Little Typer}}.
-}
+@defmodule[pie-a-let-mode #:lang]{Pie à-let-mode is a tasty
+ little fork of
+ @link["https://docs.racket-lang.org/pie/index.html?q=pie"]{
+  Pie}--the little language with dependent types that
+ accompanies David Thrane Christiansen and Daniel P.
+ Friedman's @hyperlink["http://thelittletyper.com"]{@emph{
+   The Little Typer}}--which adds the @pie[let] and @pie[equal]
+ forms. All other forms are identical to Pie; their
+ documentation is also included here for convenience.}
 
-@table-of-contents[]
+@section{Installing Pie à-let-mode}
 
-@section{Using Pie in DrRacket}
-Pie is implemented as a Racket language. While other editors may work, Pie
-is currently supported best in DrRacket.
+In DrRacket, open the @tt{Package Manager} menu (under the
+@tt{File} dropdown or similar) and in the @tt{Package
+ Source} textbox, enter @tt{pie-a-let-mode} and click the
+@tt{Install} button.
 
-After installing Pie from the Racket package database, open DrRacket.
-Change the first line to read @tt{#lang pie}, and then start typing.
-If DrRacket's "Background Expansion" feature is enabled, the type checker
-will run every time the file is modified, whether or not it is run.
-Otherwise, invoke the type checker using the "Run" button. It may be
-convenient to enable the option in DrRacket to show gold highlighting on
-errors, because it causes type errors to be highlighted while typing.
+If you prefer to use the terminal and have already set up
+Racket tools on your @tt{PATH}, simply type @tt{raco pkg
+ install pie-a-let-mode}.
+
+@section{Using Pie à-let-mode in DrRacket}
+
+Pie à-let-mode is implemented as a Racket language. While
+other editors may work, Pie à-let-mode is currently
+supported best in DrRacket.
+
+et-mode package
+(@tt{pie-a-let-mode}) from the Racket package database, open
+DrRacket. Change the first line to read @tt{#lang
+ pie-a-let-mode}, and then start typing.
+
+@subsection{Type Checker Feedback}
+
+
+If DrRacket's "Background Expansion" feature is enabled, the
+type checker will run every time the file is modified,
+whether or not it is run. Otherwise, invoke the type checker
+using the "Run" button.
+
+Mousing over well-typed terms will display a tooltip
+describing the term and its type.
+
+It may be convenient to enable the option in
+DrRacket to show gold highlighting on errors, because it
+causes type errors to be highlighted while typing.
 
 Alternatively, it is also possible to use any editor to create a Pie program,
 and then save it to a file. Run the file with the command-line version of
 Racket to test it.
 
-The 
-@other-doc['(lib "todo-list/scribblings/todo-list.scrbl")]
-is supported by Pie. Each @pie[TODO] in the program is listed.
+The @other-doc['(lib "todo-list/scribblings/todo-list.scrbl")]
+is supported by Pie. Each @pie[TODO] in the program is
+listed.
 
 @section{General-Purpose Expressions}
 @defform[#:kind "type annotation" (the type expr)]{
@@ -525,7 +553,7 @@ at the top level of a program.
      (eval:error (check-same Atom 4 'four))
      (eval:error (check-same Atom 'kirsebær 'hindbær))]
 
-            
+
  Because of the η-rules for @pie[Π] and @pie[Absurd], every proof of a negation
  is the same as every other proof. This is useful when testing programs that
  produce proofs.
@@ -540,4 +568,50 @@ at the top level of a program.
          f)
        (λ (f g)
          g))]
+}
+
+@section{Pie à-let-mode Specific Expressions}
+
+@defform[#:kind "local bindings"
+         (let ([id id-expr] ...) expr)]{
+ Binds @pie[id-expr] to @pie[id] for any proceeding bindings
+ and for the body @pie[expr]. i.e. acts like Racket's
+ @pie[let*]. This form is checked in synthesis mode.
+
+@ex[(check-same (Pair Atom Atom)
+                (let ([x 'one]
+                      [y 'two]
+                      [p (the (Pair Atom Atom)
+                           (cons x y))])
+                  p)
+                (the (Pair Atom Atom)
+                  (cons 'one 'two)))]
+}
+
+@defform[#:kind "equational rewriting"
+         (equal type term clause ...+)
+         #:grammar
+         [(clause (code:line #:by proof term))]]{ Allows for
+ simple "equational rewriting"-style proofs but is really just a shorthand
+ for basic pie forms. E.g.:
+
+ @ex[(check-same (= Nat 2 (add1 (add1 0)))
+                 (equal Nat
+                        2
+                        #:by (same 2)
+                        (add1 (add1 0)))
+                 (same 2))
+     (check-same (= Nat 2 (add1 (add1 0)))
+                 (equal Nat
+                        2
+                        #:by (same (add1 1))
+                        (add1 1)
+                        #:by (same (add1 (add1 0)))
+                        (add1 (add1 0)))
+                 (trans (the (= Nat 2 (add1 (add1 0)))
+                             (same (add1 1)))
+                        (the (= Nat 2 (add1 (add1 0)))
+                             (same 2))))]
+
+
 }

@@ -66,14 +66,21 @@
                   (bind b2 y lvl)
                   body1
                   body2)]
+    [(`(let ((,x ,x-val)) ,body1) `(let ((,y ,y-val)) ,body2))
+     (and (α-equiv-aux lvl b1 b2 x-val y-val)
+          (α-equiv-aux (add1 lvl)
+                       (bind b1 x lvl)
+                       (bind b2 y lvl)
+                       body1
+                       body2))]
     ;; η for Absurd relies on read-back inserting an annotation
     [(`(the Absurd ,_) `(the Absurd ,_)) #t]
     ;; Non-binding keywords
     [((cons kw1 args1)
       (cons kw2 args2))
      #:when (and (symbol? kw1) (symbol? kw2)
-                 (not (or (eqv? kw1 'λ) (eqv? kw1 'Π) (eqv? kw1 'Σ) (eqv? kw1 'TODO)))
-                 (not (or (eqv? kw2 'λ) (eqv? kw2 'Π) (eqv? kw2 'Σ) (eqv? kw2 'TODO)))
+                 (not (memv kw1 '(λ Π Σ let TODO)))
+                 (not (memv kw2 '(λ Π Σ let TODO)))
                  (not (var-name? kw1)) (not (var-name? kw2)))
      (and (eqv? kw1 kw2)
           (α-equiv-aux* lvl b1 b2 args1 args2))]

@@ -1317,7 +1317,6 @@
    (Π ((x₁ Atom)) (Σ ((x₂ Nat)) Atom))
    (λ (y) (cons (add1 (add1 (add1 (add1 (add1 zero))))) y)))))
 
-
 ;;; This is a regression test for issue #14, from
 ;;; https://github.com/the-little-typer/pie/issues/14
 ;;;
@@ -1651,3 +1650,76 @@
                               (lambda (x) (left x)))))
            Nat Trivial (left 2))))
  (go '(the (Either Trivial Nat) (right (add1 (add1 zero))))))
+;; a few let tests
+(check-equal?
+ (rep init-ctx (parse-pie #'(the (= Nat 2 2) (let ([x 2]) (same x)))))
+ (go '(the (= Nat (add1 (add1 zero)) (add1 (add1 zero))) (same (add1 (add1 zero))))))
+(check-equal?
+ (rep init-ctx (parse-pie #'(the (= Nat 2 2) (let ([x 2] [x x]) (same x)))))
+ (go '(the (= Nat (add1 (add1 zero)) (add1 (add1 zero))) (same (add1 (add1 zero))))))
+(check-equal?
+ (rep init-ctx (parse-pie #'(the (= Nat 2 2) (let ([x 2] [y x] [x y]) (same y)))))
+ (go '(the (= Nat (add1 (add1 zero)) (add1 (add1 zero))) (same (add1 (add1 zero))))))
+(check-stop-message-equal?
+ (rep init-ctx (parse-pie #'(let ([x 2]) (same x))))
+ '("Can't determine a type"))
+(check-true
+ (list? (ann (for/fold
+              ([st init-ctx])
+              ([d (map parse-pie-decl
+                       (list #'(claim plus1 (-> Nat Nat))
+                             #'(define plus1 (λ (x) (add1 x)))
+                             #'(claim incr (-> Nat Nat))
+                             #'(define incr
+                                 (λ (n)
+                                   (iter-Nat n
+                                             1
+                                             (λ (x) (add1 x)))))
+                             #'(claim add (-> Nat Nat Nat))
+                             #'(define add (λ (n m) (iter-Nat n m incr)))
+                             #'(claim sum (-> Nat Nat Nat))
+                             #'(define sum (λ (n m) (iter-Nat n m plus1)))
+                             #'(claim incr=plus1
+                                      (Π ([n Nat])
+                                         (= Nat (incr n) (plus1 n))))
+                             #'(define incr=plus1
+                                 (λ (x)
+                                   (ind-Nat
+                                    x
+                                    (λ (n) (= Nat (incr n) (plus1 n)))
+                                    (same 1)
+                                    (λ (n-1 plus1n-1=incrn-1)
+                                      (cong plus1n-1=incrn-1 plus1)))))
+                             #'(claim add=sum
+                                      (Π ([n Nat]
+                                          [m Nat])
+                                         (= Nat (add n m) (sum n m))))
+                             #'(define add=sum
+                                 (λ (n m)
+                                   (ind-Nat
+                                    n
+                                    (λ (x) (= Nat
+                                              (add x m)
+                                              (sum x m)))
+                                    (same m)
+                                    (λ (i almostProof)
+                                      (let ([IH almostProof]
+                                            [H1 (cong IH incr)]
+                                            [H2 (incr=plus1 (sum i m))])
+                                        (replace H2
+                                                 (λ (x) (= Nat
+                                                           (incr (add i m))
+                                                           x))
+                                                 H1))))))))])
+               (match d
+                 [`(claim ,x ,loc ,t)
+                  (match (add-claim st x loc t)
+                    [(go new-st) new-st]
+                    [(stop where msg)
+                     (error (format "Nope: ~a" msg))])]
+                 [`(definition ,x ,loc ,v)
+                  (match (add-def st x loc v)
+                    [(go new-st) new-st]
+                    [(stop where msg)
+                     (error (format "Nope: ~a" msg))])]))
+             Ctx)))

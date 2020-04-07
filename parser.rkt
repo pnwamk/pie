@@ -57,6 +57,10 @@
   (@ (syntax->srcloc loc) `(λ ,xs ,body)))
 
 
+(define (make-let loc bindings body)
+  (@ (syntax->srcloc loc) `(let ,bindings ,body)))
+
+
 (define (make-Pi loc args body)
   (@ (syntax->srcloc loc) `(Π ,args ,body)))
 
@@ -245,7 +249,7 @@
                       = same replace symm trans cong ind-=
                       head tail Vec vec:: vecnil ind-Vec
                       Either left right ind-Either
-                      TODO)
+                      TODO let equal)
     [U
      (make-U stx)]
     [Nat
@@ -278,6 +282,43 @@
      (make-lambda stx
                   (map binding-site (syntax->list #'(x0 x ...)))
                   (parse-pie #'b))]
+    [(let ~! ([(~describe "argument name" x0:pie-id) x0-val:expr]
+              [(~describe "argument name" x:pie-id)  x-val:expr]
+              ...)
+       b)
+     (define ids (map binding-site (syntax->list #'(x0 x ...))))
+     (define vals (map parse-pie (syntax->list #'(x0-val x-val ...))))
+     (make-let stx
+               (map list ids vals)
+               (parse-pie #'b))]
+    [(equal X term1 #:by proof1 term2 (~seq #:by other-proofs other-terms) ...)
+     (define xty (parse-pie #'X))
+     (define first-proof
+       (make-the stx
+                 (make-= #'proof1 xty (parse-pie #'term1) (parse-pie #'term2))
+                 (parse-pie #'proof1)))
+     (define proofs (syntax->list #'(other-proofs ...)))
+     (define terms (cons #'term2 (syntax->list #'(other-terms ...))))
+     (cond
+       [(null? proofs) first-proof]
+       [else
+        (make-trans
+         stx
+         first-proof
+         (let loop ([terms terms]
+                    [proofs proofs])
+           (match* (terms proofs)
+             [((list t1 t2) (list p))
+              (make-the p
+                        (make-= p xty (parse-pie t1) (parse-pie t2))
+                        (parse-pie p))]
+             [((list-rest t1 t2 ts) (cons p ps))
+              (make-trans
+               t1
+               (make-the p
+                         (make-= p xty (parse-pie t1) (parse-pie t2))
+                         (parse-pie p))
+               (loop (cons t2 ts) ps))])))])]
     [(Pi ~! more ...)
      (parse-pie #'(Π more ...))]
     [(∏ ~! more ...)
@@ -438,7 +479,7 @@
     #:datum-literals (U
                       Nat zero add1
                       which-Nat iter-Nat rec-Nat ind-Nat
-                      → -> Pi Π ∏ the lambda λ  Atom quote
+                      → -> Pi Π ∏ the lambda λ Atom quote
                       cons car cdr Sigma Σ Pair
                       Trivial sole
                       List :: nil ind-List rec-List
@@ -446,7 +487,7 @@
                       = same replace symm trans cong ind-=
                       head tail Vec vec:: vecnil ind-Vec
                       Either left right ind-Either
-                      TODO)
+                      TODO equal let)
     [U
      (add-disappeared (syntax/loc stx kw:U)
                       stx)]
@@ -490,6 +531,24 @@
                           (void lam/loc
                                 (let* ([x0 (void)] [x (void)] ...)
                                   b/bindings)))
+                        (car (syntax-e stx))))]
+    [(let ~! ([x0:id val0] [x:id val] ...) b)
+     (with-syntax ([let/loc (syntax/loc (car (syntax-e stx)) kw:let)]
+                   [val0/bindings #'(pie->binders val0)]
+                   [(val/bindings ...) #'((pie->binders val) ...)]
+                   [b/bindings #'(pie->binders b)])
+       (add-disappeared (syntax/loc stx
+                          (void let/loc
+                                (let* ([x0 (void val0/bindings)]
+                                       [x (void val/bindings)] ...)
+                                  b/bindings)))
+                        (car (syntax-e stx))))]
+    [(equal ~! . body)
+     (with-syntax ([equal/loc (syntax/loc (car (syntax-e stx)) kw:equal)]
+                   [(terms ...)
+                    (filter (λ (x) (not (keyword? (syntax->datum x))))
+                            (syntax->list #'body))])
+       (add-disappeared (syntax/loc stx (void equal/loc (pie->binders terms) ...))
                         (car (syntax-e stx))))]
     [(Pi ~! ((x0:id A0) (x:id A) ...) B)
      (with-syntax ([sig/loc (syntax/loc (car (syntax-e stx)) kw:Pi)]

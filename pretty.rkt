@@ -50,7 +50,8 @@
            (eqv? sym 'Pi)
            (eqv? sym 'Π)
            (eqv? sym 'Sigma)
-           (eqv? sym 'Σ))))
+           (eqv? sym 'Σ)
+           (eqv? sym 'let))))
 
 (define (ind? sym)
   (and (symbol? sym)
